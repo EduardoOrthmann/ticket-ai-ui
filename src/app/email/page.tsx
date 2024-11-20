@@ -1,10 +1,13 @@
 'use client';
 
 import EmailModal from '@/components/email-modal/EmailModal';
-import { API_BASE_URL } from '@/types/constants';
+import { api } from '@/lib/axios';
 import { Email, TicketRequest } from '@/types/types';
 import { stripHtml } from '@/utils/stringUtils';
-import { CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import {
+  CheckCircleOutlined,
+  ExclamationCircleOutlined,
+} from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, message, Space, Spin, Table, Typography } from 'antd';
 import { ColumnsType } from 'antd/es/table';
@@ -18,22 +21,16 @@ const EmailTable = () => {
   const { data, isLoading, isError, error } = useQuery<Email[]>({
     queryKey: ['emails'],
     queryFn: async () => {
-      const response = await fetch(`${API_BASE_URL}/email`);
-      return await response.json();
+      const response = await api.get<Email[]>('/email');
+      return response.data;
     },
   });
 
   const queryClient = useQueryClient();
   const createTicket = useMutation({
     mutationFn: async (data: TicketRequest) => {
-      const response = await fetch(`${API_BASE_URL}/ticket/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-      return await response.json();
+      const response = await api.post('/ticket/generate', data);
+      return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
@@ -56,7 +53,13 @@ const EmailTable = () => {
 
   const columns: ColumnsType<Email> | undefined = [
     { title: 'Subject', dataIndex: 'subject', key: 'subject', ellipsis: true },
-    { title: 'Body', dataIndex: 'body', key: 'body', ellipsis: true, render: (text: string) => stripHtml(text) },
+    {
+      title: 'Body',
+      dataIndex: 'body',
+      key: 'body',
+      ellipsis: true,
+      render: (text: string) => stripHtml(text),
+    },
     {
       title: 'Status',
       key: 'status',

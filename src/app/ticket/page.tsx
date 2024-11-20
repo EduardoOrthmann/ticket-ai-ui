@@ -1,20 +1,28 @@
 'use client';
 
-import { API_BASE_URL } from '@/types/constants';
+import TicketModal from '@/components/ticket-modal/TicketModal';
+import { api } from '@/lib/axios';
 import { Ticket } from '@/types/types';
-import { stripHtml } from '@/utils/stringUtils';
 import { useQuery } from '@tanstack/react-query';
-import { Spin, Table } from 'antd';
+import { Button, Space, Spin, Table } from 'antd';
 import { ColumnsType } from 'antd/es/table';
+import { useState } from 'react';
 
 const TicketTable = () => {
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const { data, isLoading, isError, error } = useQuery<Ticket[]>({
     queryKey: ['tickets'],
     queryFn: async () => {
-      const response = await fetch(`${API_BASE_URL}/ticket`);
-      return await response.json();
+      const response = await api.get<Ticket[]>('/ticket');
+      return response.data;
     },
   });
+
+  const showTicketDetails = (ticket: Ticket) => {
+    setSelectedTicket(ticket);
+    setIsModalOpen(true);
+  };
 
   const columns: ColumnsType<Ticket> | undefined = [
     { title: 'Cause Code', dataIndex: 'cause_code', key: 'causeCode' },
@@ -24,14 +32,22 @@ const TicketTable = () => {
       dataIndex: 'brief_description',
       key: 'briefDescription',
     },
-    { title: 'Assignment', dataIndex: 'assignment', key: 'assignment' },
     {
       title: 'Summarized Issue',
       dataIndex: 'summarized_issue',
       key: 'summarizedIssue',
     },
-    { title: 'Reason', dataIndex: 'reason', key: 'reason' },
-    { title: 'Raw Email', dataIndex: 'raw_email', key: 'rawEmail', ellipsis: true, render: (text: string) => stripHtml(text) },
+    {
+      title: 'Actions',
+      key: 'actions',
+      render: (_: unknown, record: Ticket) => (
+        <Space>
+          <Button onClick={() => showTicketDetails(record)} type="default">
+            View Details
+          </Button>
+        </Space>
+      ),
+    },
   ];
 
   if (isLoading) return <Spin />;
@@ -42,11 +58,18 @@ const TicketTable = () => {
       <Table
         columns={columns}
         dataSource={data}
-        rowKey={(record) => record.cause_code}
+        rowKey={(record) => record.raw_email}
         pagination={{ pageSize: 10 }}
+      />
+
+      <TicketModal
+        ticket={selectedTicket}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
       />
     </div>
   );
 };
 
 export default TicketTable;
+
